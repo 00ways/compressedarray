@@ -1,3 +1,3 @@
-# CompressedProgram
+# CompressedArray
 
-Quantizes data inside and allows RW access to content
+Compresses data inside and allows Read-Write access to content
