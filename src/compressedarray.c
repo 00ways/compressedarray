@@ -7,7 +7,10 @@
 #include <stdbool.h>
 #include <textutil.h>
 #include <time.h>
+
+
 struct compressedarray {
+    bool error;
     enum ElementCapacity element_capacity;
     size_t length;
     byte* data;
@@ -16,55 +19,65 @@ struct compressedarray {
 compressedarray_t* spawnCompressedArray(enum ElementCapacity capacity, size_t length) {
     compressedarray_t* array = malloc(sizeof(struct compressedarray));
     *array = (struct compressedarray) {
+        .error = false,
         .element_capacity = capacity,
         .length = length,
-        // 0b1 >> 3 | 1 = 1
-        // 0b111 >> 3 | 1 = 1
-        // 0b1000 >> 3 | 1 = 1
         .data = malloc((length * (8 / capacity) + 7) / 8)
     };
-    printf("alloc: %ld\n", (length * (8 / capacity) + 7) / 8);
     return array;
 }
 void killCompressedArray(compressedarray_t* array) {
     free(array->data);
     free(array);
 }
+bool caHasErrors(compressedarray_t* array) {
+    bool err_stat = array->error;
+    array->error = false;
+    return err_stat;
+}
 byte caGet(compressedarray_t* array, size_t at) {
+    if (at > array->length) {
+        array->error = true;
+        return 0x00;
+    }
+    array->error = false;
     uint8_t bits = 8 / array->element_capacity;
-    int byte_index = at / array->element_capacity;
-    int bit_offset = (array->element_capacity - 1 - (at % array->element_capacity)) * bits;
+    int element_index = at / array->element_capacity;
+    int bit_offset_real = (array->element_capacity - 1 - (at % array->element_capacity)) * bits;
     byte mask = (1 << bits) - 1;
-    return (array->data[byte_index] >> bit_offset) & mask;
+    return (array->data[element_index] >> bit_offset_real) & mask;
 }
 void caSet(compressedarray_t* array, size_t at, byte what) {
-    uint8_t bits = 8 / array->element_capacity;
-    int byte_index = at / array->element_capacity;
-    int bit_offset = (array->element_capacity - 1 - (at % array->element_capacity)) * bits;
-    byte mask = (1 << bits) - 1;
-    array->data[byte_index] &= ~(mask << bit_offset); // clear
-    array->data[byte_index] |= (what & mask) << bit_offset; // set
+    if (at > array->length) {
+        array->error = true;
+        return;
+    }
+    array->error = false;
+    uint8_t bitcount = 8 / array->element_capacity;
+    int element_index = at / array->element_capacity;
+    int bit_offset_real = (array->element_capacity - 1 - (at % array->element_capacity)) * bitcount;
+    byte mask = (1 << bitcount) - 1;
+    array->data[element_index] &= ~(mask << bit_offset_real); // clear
+    array->data[element_index] |= (what & mask) << bit_offset_real; // set
 }
 
 
-byte caGetIndependant(byte* data, enum ElementCapacity element_capacity, size_t length, uint8_t bitoffset, size_t at) {
-    uint8_t bits = 8 / element_capacity;
-    printf("bits: %d\n", bits);
-    int byte_index = at / element_capacity;
-    printf("byte at: %s\n", showBits(data[byte_index]));
-    int bit_offset = (at % element_capacity) * bits + bitoffset;
-    printf("bit offset: %d\n", bit_offset);
-    byte mask = ((1 << bits) - 1);
-    printf("mask: %s\n", showBits( mask));
-    printf("bits at: %s\n", showBits(data[byte_index] >> bit_offset));
-    printf("result: %s\n", showBits((data[byte_index] >> bit_offset) & mask));
-    return (data[byte_index] >> bit_offset) & mask;
+byte caGetIndependant(byte* data, enum ElementCapacity elementcapacity, size_t length, uint8_t bitoffset, size_t at) {
+    if (at > length) 
+        return 0x00;
+    uint8_t bitcount = 8 / elementcapacity;
+    int element_index = at / elementcapacity;
+    int bit_offset_real = (at % elementcapacity) * bitcount + bitoffset;
+    byte mask = ((1 << bitcount) - 1);
+    return (data[element_index] >> bit_offset_real) & mask;
 }
-void caSetIndependant(byte* data, enum ElementCapacity element_capacity, size_t length, uint8_t bitoffset, size_t at, byte what) {
-    uint8_t bits = 8 / element_capacity;
-    int byte_index = at / element_capacity;
-    int bit_offset = (at % element_capacity) * bits + bitoffset;
-    byte mask = ((1 << bits) - 1);
-    data[byte_index] &= ~(mask << bit_offset); // clear
-    data[byte_index] |= (what & mask) << bit_offset; // set
+void caSetIndependant(byte* data, enum ElementCapacity elementcapacity, size_t length, uint8_t bitoffset, size_t at, byte what) {
+    if (at > length) 
+        return;
+    uint8_t bitcount = 8 / elementcapacity;
+    int element_index = at / elementcapacity;
+    int bit_offset_real = (at % elementcapacity) * bitcount + bitoffset;
+    byte mask = ((1 << bitcount) - 1);
+    data[element_index] &= ~(mask << bit_offset_real); // clear
+    data[element_index] |= (what & mask) << bit_offset_real; // set
 }
