@@ -1,4 +1,3 @@
-#include <pthread.h>
 #include <comparr/compressedarray.h>
 #include <comparr/textutil.h>
 #include <stdint.h>
