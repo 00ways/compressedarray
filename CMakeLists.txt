@@ -7,7 +7,7 @@ add_library(compressedarray
     src/compressedarray.c
     src/textutil.c
 )
-add_library(comparr::Lib ALIAS compressedarray)
+add_library(complib::Arr ALIAS compressedarray)
 set_target_properties(compressedarray PROPERTIES
     OUTPUT_NAME compressedarray
     EXPORT_NAME compressedarray
@@ -42,7 +42,7 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/"
 install(EXPORT compressedarrayTargets
     FILE compressedarrayTargets.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/compressedarray
-    NAMESPACE comparr::
+    NAMESPACE complib::
 )
 write_basic_package_version_file( 
   "compressedarrayConfigVersion.cmake" 
